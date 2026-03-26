@@ -52,15 +52,9 @@ exports.verifyOtp = async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
-    if (!phone || !otp) {
-      return res.status(400).json({ message: "Phone and OTP required" });
-    }
-
     const user = await User.findOne({ phone });
 
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+    if (!user) return res.status(400).json({ message: "User not found" });
 
     if (user.otp !== otp) {
       return res.status(400).json({ message: "Invalid OTP" });
@@ -70,16 +64,22 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP expired" });
     }
 
-    // clear OTP
+    // 🔥 increment token version (invalidate old tokens)
+    user.tokenVersion += 1;
+
     user.otp = null;
     user.otpExpiry = null;
+
     await user.save();
 
-    // generate JWT
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+        tokenVersion: user.tokenVersion
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "1h" } // 🔥 expiry added
     );
 
     res.json({
@@ -87,7 +87,6 @@ exports.verifyOtp = async (req, res) => {
       token,
       user: {
         id: user._id,
-        phone: user.phone,
         role: user.role
       }
     });

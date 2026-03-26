@@ -6,22 +6,36 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "User"
     },
+
     phone: {
       type: String,
       required: true,
       unique: true
     },
+
     role: {
       type: String,
       enum: ["teacher", "student"],
       default: "student"
     },
+
+    // 🔐 OTP fields
     otp: {
-      type: String
+      type: String,
+      default: null
     },
+
     otpExpiry: {
-      type: Date
+      type: Date,
+      default: null
+    },
+
+    // 🔥 NEW: Token version (for invalidating old tokens)
+    tokenVersion: {
+      type: Number,
+      default: 0
     }
+
   },
   { timestamps: true }
 );
