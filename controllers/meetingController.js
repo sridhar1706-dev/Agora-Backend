@@ -3,7 +3,7 @@ const Meeting = require("../models/meetingModel");
 
 
 // ============================
-// CREATE MEETING
+// CREATE MEETING + TOKEN
 // ============================
 exports.createMeeting = async (req, res) => {
   try {
@@ -11,23 +11,27 @@ exports.createMeeting = async (req, res) => {
       return res.status(403).json({ message: "Only teacher allowed" });
     }
 
-    const { title, description } = req.body;
+    // better unique channel
+    const channelName = "class_" + Date.now();
 
-    const channelName = "class_" + Math.floor(Math.random() * 100000);
-
-    // 🔥 Save meeting in DB
+    // save in DB
     const meeting = await Meeting.create({
       channelName,
-      title,
-      description,
       createdBy: req.user.id,
       role: req.user.role
     });
 
+    // 🔥 generate Agora token
+    const uid = Math.floor(Math.random() * 100000);
+    const token = generateToken(channelName, uid, req.user.role);
+
     res.json({
+      appId: process.env.AGORA_APP_ID,
+      token,
       channelName: meeting.channelName,
-      createdBy: meeting.createdBy,
-      role: meeting.role
+      uid,
+      userId: req.user.id,
+      role: req.user.role
     });
 
   } catch (err) {
@@ -35,6 +39,30 @@ exports.createMeeting = async (req, res) => {
   }
 };
 
+
+// ============================
+// GET RECENT MEETINGS
+// ============================
+exports.getRecentMeetings = async (req, res) => {
+  try {
+    const meetings = await Meeting.find()
+      .sort({ createdAt: -1 }) // 🔥 latest first
+      .limit(10); // optional limit
+
+    res.json({
+      count: meetings.length,
+      meetings: meetings.map(m => ({
+        channelName: m.channelName,
+        createdBy: m.createdBy,
+        role: m.role,
+        createdAt: m.createdAt
+      }))
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // ============================
 // JOIN MEETING
