@@ -13,13 +13,33 @@ const app = express();
 
 connectDB(); // ✅ ADD THIS
 
+// app.use(
+//   cors({
+//     origin: "https://myagoraapp.duckdns.org",
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     credentials: true
+//   })
+// );
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://myagoraapp.duckdns.org"
+];
+
 app.use(
   cors({
-    origin: "https://myagoraapp.duckdns.org",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   })
 );
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
