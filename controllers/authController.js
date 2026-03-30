@@ -5,39 +5,104 @@ const jwt = require("jsonwebtoken");
 // ============================
 // LOGIN (SEND OTP)
 // ============================
+// exports.login = async (req, res) => {
+//   try {
+//     const { phone, role } = req.body;
+
+//     if (!phone) {
+//       return res.status(400).json({ message: "Phone number required" });
+//     }
+
+//     // generate OTP
+//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+//     let user = await User.findOne({ phone });
+
+//     // if new user → create
+//     if (!user) {
+//       user = await User.create({
+//         phone,
+//         role: role || "student"
+//       });
+//     }
+
+//     // update OTP
+//     user.otp = otp;
+//     user.otpExpiry = Date.now() + 5 * 60 * 1000; // 5 mins
+//     await user.save();
+
+//     // console (optional)
+//     console.log("OTP:", otp);
+
+//     // ✅ return OTP in response
+//     res.json({
+//       message: "OTP sent successfully",
+//       otp: otp   // 🔥 added
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.login = async (req, res) => {
   try {
     const { phone, role } = req.body;
 
+    // =========================
+    // VALIDATION
+    // =========================
     if (!phone) {
       return res.status(400).json({ message: "Phone number required" });
     }
 
-    // generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    if (!role) {
+      return res.status(400).json({ message: "Role is required" });
+    }
 
+    if (!["teacher", "student"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    // =========================
+    // FIND USER
+    // =========================
     let user = await User.findOne({ phone });
 
-    // if new user → create
+    // =========================
+    // NEW USER
+    // =========================
     if (!user) {
       user = await User.create({
         phone,
-        role: role || "student"
+        role
       });
+    } else {
+      // =========================
+      // EXISTING USER ROLE CHECK
+      // =========================
+      if (user.role !== role) {
+        return res.status(400).json({
+          message: `This number is registered as ${user.role}. Please login as ${user.role}`
+        });
+      }
     }
 
-    // update OTP
+    // =========================
+    // GENERATE OTP
+    // =========================
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
     user.otp = otp;
-    user.otpExpiry = Date.now() + 5 * 60 * 1000; // 5 mins
+    user.otpExpiry = Date.now() + 5 * 60 * 1000;
+
     await user.save();
 
-    // console (optional)
     console.log("OTP:", otp);
 
-    // ✅ return OTP in response
     res.json({
       message: "OTP sent successfully",
-      otp: otp   // 🔥 added
+      otp // (remove in production)
     });
 
   } catch (err) {
